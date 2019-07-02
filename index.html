@@ -21,60 +21,101 @@
 <br>
 <hr>
 <img id="loader_img" src="loader.gif" style="margin-left: 40%;margin-top: 10%"/>
-<table id="data_table" class="table table-striped table-bordered" style="width:100%">
-    <thead>
-    <tr>
-        <th>Bank ID</th>
-        <th>IFSC</th>
-        <th>Branch</th>
-        <th>Bank Name</th>
-        <th>City</th>
-        <th>District</th>
-        <th>State</th>
-        <th>Address</th>
-    </tr>
-    </thead>
-    <tbody id="table_body">
+<div id="table_container">
 
-    </tbody>
-</table>
+</div>
+<div id="table_template">
+    <table id="data_table"  class="table table-striped table-bordered"  style="width:100%" >
+        <thead>
+        <tr>
+            <th>Bank ID</th>
+            <th>IFSC</th>
+            <th>Branch</th>
+            <th>Bank Name</th>
+            <th>City</th>
+            <th>District</th>
+            <th>State</th>
+            <th>Address</th>
+        </tr>
+        </thead>
+        <tbody id="table_body" >
+
+        </tbody>
+    </table>
+
+</div>
 </body>
 <script>
     $(document).ready(function(){
-        $('#data_table').hide();
+        $('#table_template').hide();
         $('#loader_img').hide();
 
+        var object = JSON.parse(localStorage.getItem("ajax_responses"));
+        if (!object) {
+            var json_object = {};
+            localStorage.setItem("ajax_responses", JSON.stringify(json_object));
+        }
+
+
     });
+
+    function change_data(rows){
+        table_template = $('#table_template');
+        var content = table_template.children().clone(true, true);
+        $('#table_container').append(content);
+        document.getElementById("table_body").innerHTML=rows;
+        $('#data_table').DataTable();
+        $('#data_table').show();
+        $('#loader_img').hide();
+    }
     function change_city(){
+        $('#table_container').text('');
+
         let value = $('#city_list').val();
+
         var rows="";
         if(value=="-1"){
-            $('#data_table').hide();
             alert("Please select any city.");
         }else{
-            $('#data_table').hide();
             $('#loader_img').show();
-            $.get(
-                "https://vast-shore-74260.herokuapp.com/banks",
-                {city: value},
-                function(data) {
-                   let size = data.length;
-                   for(i=0;i<size;i++){
-                       rows+="<tr><td>"+data[i].bank_id+"</td>" +
-                           "<td>"+data[i].ifsc+"</td>"+
-                           "<td>"+data[i].branch+"</td>"+
-                           "<td>"+data[i].bank_name+"</td>"+
-                           "<td>"+data[i].city+"</td>"+
-                           "<td>"+data[i].district+"</td>"+
-                           "<td>"+data[i].state+"</td>"+
-                           "<td>"+data[i].address+"</td></tr>"
-                    }
-                    document.getElementById("table_body").innerHTML=rows;
-                    $('#data_table').DataTable();
-                    $('#data_table').show();
-                    $('#loader_img').hide();
+            var object = JSON.parse(localStorage.getItem("ajax_responses"));
+
+
+             if (object) {
+                var object1 = JSON.parse(object.hasOwnProperty(value));
+                 var dateString = object.timestamp;
+
+                 now = new Date().getTime().toString();
+                if(object1 && (dateString * 1000 * 60 * 30) >= now ){
+                   change_data(object[value]);
+                }else{
+                    $.ajax({
+                        type: "GET",
+                        url: "https://vast-shore-74260.herokuapp.com/banks",
+                        data: {
+                            city: value
+                        },
+                        cache: true,
+                        success:  function(data) {
+                            let size = data.length;
+                            for(i=0;i<size;i++){
+                                rows+="<tr><td>"+data[i].bank_id+"</td>" +
+                                    "<td>"+data[i].ifsc+"</td>"+
+                                    "<td>"+data[i].branch+"</td>"+
+                                    "<td>"+data[i].bank_name+"</td>"+
+                                    "<td>"+data[i].city+"</td>"+
+                                    "<td>"+data[i].district+"</td>"+
+                                    "<td>"+data[i].state+"</td>"+
+                                    "<td>"+data[i].address+"</td></tr>"
+                            }
+                            // store response in localstorage
+                            object[value]=rows;
+                            localStorage.setItem("ajax_responses", JSON.stringify(object));
+                            change_data(rows);
+                        }
+                    });
                 }
-            );
+            }
         }
     }
 </script>
